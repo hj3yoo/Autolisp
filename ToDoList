@@ -1,0 +1,17 @@
+Additional functions
+    - Increment number of multiple labels by (given number)
+                Sep 22 : Initial success  
+    - Find number of the (chosen block reference) in a (given window)
+    - "MATCHPROP" each identical objects with the (chosen object) in a (given window)
+        _ options: dimension, layer, linetype/lineweight/colour
+
+Set-up enhancing
+    - Use Enter to use previous settings
+    - Catch inappropriate inputs
+    - Use keyword to choose an option
+    - Visualize set-up window
+
+ToLearnList
+    - How to modify multiple entities at once?
+    - Error catching
+    - Visual Basic?
