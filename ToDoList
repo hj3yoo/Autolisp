@@ -1,6 +1,6 @@
 Additional functions
     - Increment number of multiple labels by (given number)
-                Sep 22 : Initial success  
+                Sep 22, 2014 : Initial success  
     - Find number of the (chosen block reference) in a (given window)
     - "MATCHPROP" each identical objects with the (chosen object) in a (given window)
         _ options: dimension, layer, linetype/lineweight/colour
@@ -8,6 +8,7 @@ Additional functions
 Set-up enhancing
     - Use Enter to use previous settings
     - Catch inappropriate inputs
+        Sep 23, 2014 : Initial success
     - Use keyword to choose an option
     - Visualize set-up window
 
