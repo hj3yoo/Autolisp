@@ -7,13 +7,14 @@
 ;		Refactoring program
 ;Sep 24, 2014 : Incr function added
 ;Sep 25, 2014 : Refactoring program
+;Sep 26, 2014 : FindAll function added
+;		Initial menu created
 ;--------------------------------------------------------------
-
 (defun incrementBy (jump)
-  (setq *pnlCur (+ *pnlCur jump))
+  (setq *pnlCur (+ *pnlCur jump) )
   (while (> *pnlCur *pnlLim)
-    (setq *pnlCur (- *pnlCur *pnlLim))
-    (setq *strCur (1+ *strCur))
+    (setq *pnlCur (- *pnlCur *pnlLim) )
+    (setq *strCur (1+ *strCur) )
   )
   (if (> *strCur *strLim)
     (progn
@@ -26,21 +27,21 @@
 )
 
 (defun incrementEntityBy (jump ent / index entInfo txt pnlNum strNum)
-  (setq entInfo (entget ent))
+  (setq entInfo (entget ent) )
   (setq index 1)
-  (setq txt (cdr (assoc 1 entInfo))); (pnlNum).(strNum)
+  (setq txt (cdr (assoc 1 entInfo) ) ); (pnlNum).(strNum)
 
   ; separate pnlNum and strNum from txt
-  (while (/= (substr txt index 1) ".")
-    (setq index (1+ index))
+  (while (or (/= (substr txt index 1) ".") (> index 10))
+    (setq index (1+ index) )
   ); while
-  (setq pnlNum (atoi (substr txt 1 (1- index))))
-  (setq strNum (atoi (substr txt (1+ index))))
+  (setq pnlNum (atoi (substr txt 1 (1- index) ) ) )
+  (setq strNum (atoi (substr txt (1+ index) ) ) )
   ; increment the label
-  (setq pnlNum (+ pnlNum jump))
+  (setq pnlNum (+ pnlNum jump) )
   (while (> pnlNum *pnlLim)
-    (setq pnlNum (- pnlNum *pnlLim))
-    (setq strNum (1+ strNum))
+    (setq pnlNum (- pnlNum *pnlLim) )
+    (setq strNum (1+ strNum) )
   ); while
   ; terminate if the label is outside of the limit
   (if (> strNum *strLim)
@@ -49,8 +50,8 @@
       (setq term 1)
     ); progn
     (progn
-      (setq txt (strcat (itoa pnlNum) "." (itoa strNum)))
-      (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo))
+      (setq txt (strcat (itoa pnlNum) "." (itoa strNum) ) )
+      (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo) )
       (entmod entInfo)
     ); progn
   ); if
@@ -65,12 +66,12 @@
 	(cond
 	  ( (getint
 	      (strcat "\n" msg " <"
-		      (if (eval var) (itoa (eval var)) "1")
+		      (if (eval var) (itoa (eval var) ) "1")
 		      ">: "
 	      ); strcat
 	    ); getint
 	  )
-	  ((eval (cond ((eval var)) (1))))
+	  ( (eval (cond ( (eval var) ) (1) ) ) )
 	); cond
       ); set
     ); mod1
@@ -80,17 +81,17 @@
 	    (cond
 	      ( (getint
 		  (strcat "\n" msg " <"
-			  (if (eval var) (itoa (eval var)) "1")
+			  (if (eval var) (itoa (eval var) ) "1")
 			  ">: "
 		  ); strcat
 		); getint
 	      )
-	      ((eval (cond ((eval var)) (1))))
+	      ( (eval (cond ( (eval var) ) (1) ) ) )
 	      ); cond
 	    ); setq
 	  (eval lim)
 	); if current input is bigger than the limit
-	(princ (strcat " must be less than " (itoa (eval lim))))
+	(princ (strcat " must be less than " (itoa (eval lim) ) ) )
 	); while
       (set var tmp)
     ); mod2
@@ -107,20 +108,20 @@
   (setq term 0) 
   (while (= term 0)
     ; ask user for the label to modify
-    (while (and (/= "TEXT" entType) (/= "MTEXT" entType))
-      (setq entName (car (entsel "\nSelect the label: ")))
+    (while (and (/= "TEXT" entType) (/= "MTEXT" entType) )
+      (setq entName (car (entsel "\nSelect the label: ") ) )
       (cond
-	(entName (setq entType (cdr (assoc 0 (entget entName)))))
-	(T (princ "No objects selected"))
+	(entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
+	(T (princ "No objects selected") )
 	; read selected entity's type if present; otherwise repeat
       ); cond
     );while
     (setq entType 0)
 
     ; replace the chosen label
-    (setq entInfo (entget entName))
-    (setq txt (strcat (itoa *pnlCur) "." (itoa *strCur)))
-    (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo))
+    (setq entInfo (entget entName) )
+    (setq txt (strcat (itoa *pnlCur) "." (itoa *strCur) ) )
+    (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo) )
     (entmod entInfo)
     (princ txt)
     (incrementBy 1)
@@ -134,21 +135,62 @@
 
   (setq term 0)
   (while (not ss)
-    (setq ss (ssget '((0 . "TEXT,MTEXT"))))
+    (setq ss (ssget '( (0 . "TEXT,MTEXT") ) ) )
   ); while
-  (setq ssl (sslength ss))
+  (setq ssl (sslength ss) )
   (setq index 0)
-  (while (and (> ssl index) (= term 0))
-    (incrementEntityBy jump (ssname ss index))
-    (setq index (1+ index))
+  (while (and (> ssl index) (= term 0) )
+    (incrementEntityBy jump (ssname ss index) )
+    (setq index (1+ index) )
   ); while
 )
 
-(defun Label(/ funcMod)
-  (initget 1 "r i")
-  (setq funcMod (getkword "\nWould you like to [R]eplace label, or [I]ncrement label? "))
+(defun FindAll (/ entInfo entName entType blkName ss index count)
+  (while (/= entType "INSERT")
+    (setq entName (car (entsel "\nChoose a block reference: ")))
+    (cond
+      (entName (setq entType (cdr (assoc 0 (entget entName)))))
+      (T (princ "No block reference selected"))
+      ; read selected entity's type if present; otherwise repeat
+    ); cond
+  );while
+  (princ (setq blkName (cdr (assoc 8 (entget entName)))))
+  (while (not ss)
+    (setq ss (ssget '((0 . "INSERT"))))
+  )
+
+  (setq index 0)
+  (setq count 0)
+  ;count the number of same block reference
+  (while (< index (sslength ss))
+    (if (= (cdr (assoc 8 (entget (ssname ss index)))) blkName)
+      (setq count (1+ count))
+    )
+    (setq index (1+ index))    
+  )
+  (princ (strcat "\nThere are " (itoa count) " \"" blkname "\" within the selection."))
+  (princ)
+)
+
+(defun C:Label (/ funcMod)
+  (initget 1 "R I F")
+  (setq funcMod
+    (cond
+      (setq kwd
+        (getkword
+	  (strcat "\nWhich action would you like to do?"
+		  " \n[R]eplace existing label,"
+		  " [I]ncrement labels,"
+		  " [F]ind identical blocks"
+	  ); strcat
+	); getkword
+      ) (funcMod)
+    ); cond
+  ); setq
   (cond
-    ((= funcmod "r") (Replace))
-    ((= funcmod "i") (Increment))
+    ( (= funcMod "R") (Replace) )
+    ( (= funcMod "I") (Increment) )
+    ( (= funcMod "F") (FindAll) )
   )
 )
+
