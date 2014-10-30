@@ -1,5 +1,3 @@
-;This program performs a macro to replace existing text
-;with the incremental numbering.
 ;--------------------------------------------------------------
 ;Sep 23, 2014 : Initial commitment
 ;		Fixed a bug where current string & panel number
@@ -9,21 +7,42 @@
 ;Sep 25, 2014 : Refactoring program
 ;Sep 26, 2014 : FindAll function added
 ;		Initial menu created
+;Oct 30, 2014 : General cleanup
+;		Fixed a bug where increment would not work
+;			properly if negative number is given
 ;--------------------------------------------------------------
+
+(defun *error* ( errormsg )
+  (if (not (member errormsg '("Function cancelled" "quit / exit abort" "Cancel") ) )
+    (princ (strcat "\nError: " errormsg) )
+  )
+  (princ)
+)
+
+;NOTE: incrementEntityBy terminates AFTER changing the entity,
+;      whereas incrementBy only assigns values to *pnlCur and *strCur.
 (defun incrementBy (jump)
   (setq *pnlCur (+ *pnlCur jump) )
+
+  ; Step up / down
   (while (> *pnlCur *pnlLim)
     (setq *pnlCur (- *pnlCur *pnlLim) )
     (setq *strCur (1+ *strCur) )
   )
+  (while (< *pnlCur 0)
+    (setq *pnlCur (+ *pnlCur *pnlLim) )
+    (setq *strCur (1- *strCur) )
+  )
+
+  ;Terminates if the label is outside of the limit
   (if (> *strCur *strLim)
     (progn
       (alert "You have reached the end of the last string.")
       (setq term 1)
       (setq *strCur nil)
       (setq *pnlCur nil)
-    ); progn
-  ); if
+    )
+  )
 )
 
 (defun incrementEntityBy (jump ent / index entInfo txt pnlNum strNum)
@@ -31,91 +50,74 @@
   (setq index 1)
   (setq txt (cdr (assoc 1 entInfo) ) ); (pnlNum).(strNum)
 
-  ; separate pnlNum and strNum from txt
+  ; Assign pnlNum and strNum using txt
   (while (or (/= (substr txt index 1) ".") (> index 10))
     (setq index (1+ index) )
-  ); while
+  )
   (setq pnlNum (atoi (substr txt 1 (1- index) ) ) )
   (setq strNum (atoi (substr txt (1+ index) ) ) )
-  ; increment the label
+  
+  ; Step up / down
   (setq pnlNum (+ pnlNum jump) )
   (while (> pnlNum *pnlLim)
     (setq pnlNum (- pnlNum *pnlLim) )
     (setq strNum (1+ strNum) )
-  ); while
-  ; terminate if the label is outside of the limit
+  )
+  (while (< pnlNum 0)
+    (setq pnlNum (+ pnlNum *pnlLim) )
+    (setq strNum (1- strNum) )
+  )
+  
   (if (> strNum *strLim)
+    ; Terminate if the label is outside of the limit
+    ; Otherwise, increment the label
     (progn
       (alert "You have reached the end of the last string.")
       (setq term 1)
-    ); progn
+    )
     (progn
       (setq txt (strcat (itoa pnlNum) "." (itoa strNum) ) )
       (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo) )
       (entmod entInfo)
-    ); progn
-  ); if
+    )
+  )
   (princ)
 )
 
-(defun ask-int (var msg mod lim / tmp)
-  ;; Asks for an integer value to set into the variable, defaulting to the previous value
-  (cond
-    ( (= mod 1)
-      (set var
+(defun ask-int (var msg lim / tmp)
+  ;; Asks for an integer value to parse into the variable,
+  ;; defaulting to the previous value
+  (while
+    (>(setq tmp
 	(cond
-	  ( (getint
-	      (strcat "\n" msg " <"
-		      (if (eval var) (itoa (eval var) ) "1")
-		      ">: "
-	      ); strcat
-	    ); getint
-	  )
+	  ( (getint (strcat "\n" msg " <" (if (eval var) (itoa (eval var) ) "1")
+			    ">: ")	 ) )
 	  ( (eval (cond ( (eval var) ) (1) ) ) )
-	); cond
-      ); set
-    ); mod1
-    ( (= mod 2)
-      (while
-	(>(setq tmp
-	    (cond
-	      ( (getint
-		  (strcat "\n" msg " <"
-			  (if (eval var) (itoa (eval var) ) "1")
-			  ">: "
-		  ); strcat
-		); getint
-	      )
-	      ( (eval (cond ( (eval var) ) (1) ) ) )
-	      ); cond
-	    ); setq
-	  (eval lim)
-	); if current input is bigger than the limit
-	(princ (strcat " must be less than " (itoa (eval lim) ) ) )
-	); while
-      (set var tmp)
-    ); mod2
-  ); cond
+	)
+      )
+      (eval lim)
+    ); if current input is bigger than the limit
+    (princ (strcat " must be less than " (itoa (eval lim) ) ) )
+  )
+  (set var tmp)
 )
 
-(defun Replace(/ term txt tmpsl tmppl tmpsc tmppc entName entType entInfo)
+(defun Replace(/ term txt entName entType entInfo)
   ; initialize
-  (ask-int '*pnlLim "Enter number of panels per string" 1 9001)
-  (ask-int '*strLim "Enter number of strings existing" 1 9001)
-  (ask-int '*pnlCur "Enter current panel number" 2 *pnlLim)
-  (ask-int '*strCur "Enter current string number" 2 *strLim)
+  (ask-int '*pnlCur "Enter current panel number" *pnlLim)
+  (ask-int '*strCur "Enter current string number" *strLim)
 
-  (setq term 0) 
+  (setq term 0)
   (while (= term 0)
     ; ask user for the label to modify
     (while (and (/= "TEXT" entType) (/= "MTEXT" entType) )
       (setq entName (car (entsel "\nSelect the label: ") ) )
       (cond
-	(entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
-	(T (princ "No objects selected") )
-	; read selected entity's type if present; otherwise repeat
-      ); cond
-    );while
+		(entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
+		(T (princ "No objects selected") )
+		; read selected entity's type if present; otherwise repeat
+      )
+    )
     (setq entType 0)
 
     ; replace the chosen label
@@ -125,24 +127,23 @@
     (entmod entInfo)
     (princ txt)
     (incrementBy 1)
-  ); while
+  )
   (princ "\nEnd of the program.")
   (princ)
 )
 
 (defun Increment (/ term tmpj ss ssl index)
-  (ask-int 'jump "Enter how much you would increment by" 1 9001)
-
+  (ask-int 'jump "Enter how much you would increment by" 9001)
   (setq term 0)
   (while (not ss)
     (setq ss (ssget '( (0 . "TEXT,MTEXT") ) ) )
-  ); while
+  )
   (setq ssl (sslength ss) )
   (setq index 0)
   (while (and (> ssl index) (= term 0) )
     (incrementEntityBy jump (ssname ss index) )
     (setq index (1+ index) )
-  ); while
+  )
 )
 
 (defun FindAll (/ entInfo entName entType blkName ss index count)
@@ -152,38 +153,55 @@
       (entName (setq entType (cdr (assoc 0 (entget entName)))))
       (T (princ "No block reference selected"))
       ; read selected entity's type if present; otherwise repeat
-    ); cond
-  );while
+    )
+  )
   (princ (setq blkName (cdr (assoc 8 (entget entName)))))
   (while (not ss)
     (setq ss (ssget '((0 . "INSERT"))))
   )
-
+  
+  ; Count the number of same block reference
   (setq index 0)
   (setq count 0)
-  ;count the number of same block reference
   (while (< index (sslength ss))
     (if (= (cdr (assoc 8 (entget (ssname ss index)))) blkName)
       (setq count (1+ count))
     )
-    (setq index (1+ index))    
+    (setq index (1+ index))
   )
-  (princ (strcat "\nThere are " (itoa count) " \"" blkname "\" within the selection."))
+  (princ (strcat "\nThere are " (itoa count) " \"" blkname
+		 "\" within the selection."))
   (princ)
 )
 
-(defun C:Label (/ funcMod)
+;(defun Setup()
+;  (ask-int '*pnlLim "Enter number of panels per string" 9001)
+;  (ask-int '*strLim "Enter number of strings existing" 9001)
+;  (ask-int '*inv1StrMax "Enter number of strings for inverter #1" 9001)
+;  (setq *inv1StrMin 1)
+;  (ask-int '*inv2Str "Enter number of strings for inverter #2" 9001)
+;  (setq *inv2StrMin (1+ *inv1StrMax)
+;	*inv2StrMax (+ *inv1StrMax *inv2Str)
+;  )
+;  (ask-int '*inv3Str "Enter number of strings for inverter #3" 9001)
+;  (setq *inv3StrMin (1+ *inv2StrMax)
+;	*inv3StrMax (+ *inv2StrMax *inv3Str)
+;  )
+;)
+
+(defun Menu (/ funcMod )
   (initget 1 "R I F")
   (setq funcMod
     (cond
       (setq kwd
         (getkword
 	  (strcat "\nWhich action would you like to do?"
-		  " \n[R]eplace existing label,"
+		  "\n[R]eplace existing label,"
 		  " [I]ncrement labels,"
 		  " [F]ind identical blocks"
-	  ); strcat
-	); getkword
+;		  " [S]etup string schedule"
+	  )
+	)
       ) (funcMod)
     ); cond
   ); setq
@@ -191,6 +209,6 @@
     ( (= funcMod "R") (Replace) )
     ( (= funcMod "I") (Increment) )
     ( (= funcMod "F") (FindAll) )
+;    ( (= funcMod "S") (Setup) )
   )
 )
-
