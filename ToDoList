@@ -1,20 +1,14 @@
 Additional functions
-    - Increment number of multiple labels by (given number)
-                Sep 23, 2014 : Initial success  
-    - Find number of the (chosen block reference) in a (given window)
-                Sep 26, 2014 : Initial success
     - "MATCHPROP" each identical objects with the (chosen object) in a (given window)
         _ options: dimension, layer, linetype/lineweight/colour
+    - Use arrow keys to increment / decrement label
 
 Set-up enhancing
-    - Use Enter to use previous settings
-    - Catch inappropriate inputs
-        Sep 23, 2014 : Initial success
-    - Use keyword to choose an option
     - Visualize set-up window
+    - Use Esc key to return to the last level
 
 ToLearnList
-    - How to modify multiple entities at once?
-                ssget & while loop
     - Error catching
-    - Visual Basic?
+    - Reactor
+    - grread
+    - Visual Basic
