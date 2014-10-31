@@ -10,6 +10,7 @@
 ;Oct 30, 2014 : General cleanup
 ;		Fixed a bug where increment would not work
 ;			properly if negative number is given
+;Oct 31, 2014 : Improvement on accessing functions
 ;--------------------------------------------------------------
 
 (defun *error* ( errormsg )
@@ -104,11 +105,14 @@
 
 (defun Replace(/ term txt entName entType entInfo)
   ; initialize
+  (ask-int '*pnlLim "Enter number of panels per string" 9001)
+  (ask-int '*strLim "Enter number of strings existing" 9001)
   (ask-int '*pnlCur "Enter current panel number" *pnlLim)
   (ask-int '*strCur "Enter current string number" *strLim)
 
   (setq term 0)
   (while (= term 0)
+    
     ; ask user for the label to modify
     (while (and (/= "TEXT" entType) (/= "MTEXT" entType) )
       (setq entName (car (entsel "\nSelect the label: ") ) )
@@ -189,26 +193,34 @@
 ;  )
 ;)
 
-(defun Menu (/ funcMod )
-  (initget 1 "R I F")
-  (setq funcMod
+(defun Label (/ mod done)
+  (prompt
+    (strcat "\nWhich action would you like to do?"
+      "\n[R]eplace existing label,"
+      " [I]ncrement labels,"
+      " [F]ind identical blocks"
+      " [S]etup string schedule: "
+    ); strcat
+  ); prompt
+  (while (and (not done) (setq mod (grread T 12 0)))
     (cond
-      (setq kwd
-        (getkword
-	  (strcat "\nWhich action would you like to do?"
-		  "\n[R]eplace existing label,"
-		  " [I]ncrement labels,"
-		  " [F]ind identical blocks"
-;		  " [S]etup string schedule"
-	  )
-	)
-      ) (funcMod)
+      ((or (equal opt '(2 82)) (equal mod '(2 114))); typed R or r
+        (setq done T); [stops (while) loop to end this routine with calling of chosen routine]
+        (Replace)
+      ); R condition
+      ((or (equal opt '(2 73)) (equal mod '(2 105))); typed I or i
+        (setq done T)
+        (Increment)
+      ); I condition
+      ((or (equal opt '(2 70)) (equal mod '(2 102))); typed F or f
+        (setq done T)
+        (FindAll)
+      ); F condition
+;      ((or (equal opt '(2 83)) (equal mod '(2 115))); typed S or s
+;        (setq done T)
+;        (Setup)
+;      ); S condition
     ); cond
-  ); setq
-  (cond
-    ( (= funcMod "R") (Replace) )
-    ( (= funcMod "I") (Increment) )
-    ( (= funcMod "F") (FindAll) )
-;    ( (= funcMod "S") (Setup) )
-  )
-)
+  ); while
+); defun
+
