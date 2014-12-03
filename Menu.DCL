@@ -27,6 +27,14 @@ Menu : dialog {
                     mnemonic = "F";
                 }
               }
+              : row {
+                : button {			// Check button
+                    key = "check";
+                    label = " Check ";
+                    is_default = false;
+                    mnemonic = "h";
+                }
+              }
             }
             : column {
               : boxed_row {
@@ -82,4 +90,4 @@ Menu : dialog {
               }
             }
           }            
-}
+				}
