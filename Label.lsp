@@ -14,22 +14,25 @@
 ;Nov 04, 2014 : Initial GUI added for menu
 ;		Fixed a bug where Increment could produce
 ;			label with panel number 0
+;Dec 03, 2014 : Check function added
+;		User can now type individual commands
+;			separately in the command line
 ;--------------------------------------------------------------
 
 (defun *error* ( errormsg )
   (if (not (member errormsg '("Function cancelled" "quit / exit abort" "Cancel") ) )
     (princ (strcat "\nError: " errormsg) )
-    (if ret (Label))
+    (if ret (Label) )
   )
   (princ)
 )
 
 (defun saveVars(/ pnlCur strCur pnlLim strLim)
   ;; Save the input from the dialog box
-  (setq pnlCur (atoi (get_tile "pnlCur")))
-  (setq strCur (atoi (get_tile "strCur")))
-  (setq pnlLim (atoi (get_tile "pnlLim")))
-  (setq strLim (atoi (get_tile "strLim")))
+  (setq pnlCur (atoi (get_tile "pnlCur") ) )
+  (setq strCur (atoi (get_tile "strCur") ) )
+  (setq pnlLim (atoi (get_tile "pnlLim") ) )
+  (setq strLim (atoi (get_tile "strLim") ) )
   (setq *pnlCur pnlCur)
   (setq *strCur strCur)
   (setq *pnlLim pnlLim)
@@ -85,11 +88,12 @@
     (setq strNum (1- strNum) )
   )
   
-  (if (> strNum *strLim)
+  (if (or (> strNum *strLim) (<= strNum 0))
     ; Terminate if the label is outside of the limit
     ; Otherwise, increment the label
     (progn
-      (alert "You have reached the end of the last string.")
+      (alert "The label is outside of the limit.
+      \nPlease check the panel and string numbers again.")
       (setq term 1)
     )
     (progn
@@ -108,7 +112,7 @@
     (>(setq tmp
 	(cond
 	  ( (getint (strcat "\n" msg " <" (if (eval var) (itoa (eval var) ) "1")
-			    ">: ")	 ) )
+			    ">: ") ) )
 	  ( (eval (cond ( (eval var) ) (1) ) ) )
 	)
       )
@@ -171,43 +175,85 @@
 (defun FindAll (/ entInfo entName entType blkName ss index count)
   (setq ret T)
   (while (/= entType "INSERT")
-    (setq entName (car (entsel "\nChoose a block reference: ")))
+    (setq entName (car (entsel "\nChoose a block reference: ") ) )
     (cond
-      (entName (setq entType (cdr (assoc 0 (entget entName)))))
+      (entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
       (T (princ "No block reference selected"))
       ;; read selected entity's type if present; otherwise repeat
     )
   )
-  (princ (setq blkName (cdr (assoc 8 (entget entName)))))
+  (princ (setq blkName (cdr (assoc 8 (entget entName) ) ) ) )
   (while (not ss)
-    (setq ss (ssget '((0 . "INSERT"))))
+    (setq ss (ssget '( (0 . "INSERT") ) ) )
   )
   
   ;; Count the number of same block reference
   (setq index 0)
   (setq count 0)
   (while (< index (sslength ss))
-    (if (= (cdr (assoc 8 (entget (ssname ss index)))) blkName)
-      (setq count (1+ count))
+    (if (= (cdr (assoc 8 (entget (ssname ss index) ) ) ) blkName)
+      (setq count (1+ count) )
     )
-    (setq index (1+ index))
+    (setq index (1+ index) )
   )
   (princ (strcat "\nThere are " (itoa count) " \"" blkname
-		 "\" within the selection."))
+		 "\" within the selection.") )
+  (princ)
+)
+
+(defun Check (/ ss ssl pnlNum strNum index chkTxt lblTxt entName found compl)
+  (while (not ss)
+    (setq ss (ssget '( (0 . "TEXT,MTEXT") ) ) )
+  )
+  (setq compl T)
+  (setq pnlNum 1)
+  (setq strNum 1)
+  (while (<= strNum *strLim)
+    (setq index 0)
+    (setq ssl (sslength ss) )
+    (setq chkTxt (strcat (itoa pnlNum) "." (itoa strNum) ) )
+    (while (and (> ssl index) (not found) )
+      (setq entName (ssname ss index) )
+      (setq lblTxt (cdr (assoc 1 (entget entName) ) ) )
+      (if (= chkTxt lblTxt)
+	(progn
+	  (ssdel entName ss)
+	  (setq found T)
+	)
+      )
+      (setq index (1+ index) )
+    )
+    (if (not found)
+      (progn
+	(princ (strcat chkTxt "\n") )
+	(setq compl nil)
+      )
+      (setq found nil)
+    )
+    (setq pnlNum (1+ pnlNum) )
+    ;; Step up between strings
+    (while (> pnlNum *pnlLim)
+      (setq pnlNum (- pnlNum *pnlLim) )
+      (setq strNum (1+ strNum) )
+    )
+  )
+  (if compl
+    (princ "Good to go!")
+  )
   (princ)
 )
 
 (defun Label(/ ddiag dcl_id ret)
   (setq ret nil)
   ;; Try to load the DCL file from disk into memory
-  (if(not(setq dcl_id (load_dialog "Menu.dcl")))
+  (if(not(setq dcl_id (load_dialog "Menu.dcl") ) )
     (progn
       (alert "The DCL file could not be loaded.")
       (exit)
     )
     (progn
       ;; Try to load the definition inside the DCL file
-      (if (not (new_dialog "Menu" dcl_id))
+      (if (not (new_dialog "Menu" dcl_id) )
         (progn
           (alert "The definition could not be found inside the DCL file")
           (exit)
@@ -216,10 +262,10 @@
 	;; If the definition was loaded
         (progn
 	  ;; Generate initial value for variables
-  	  (set_tile "pnlCur" (cond (*pnlCur (itoa *pnlCur)) (T "1")))
-	  (set_tile "strCur" (cond (*strCur (itoa *strCur)) (T "1")))
-	  (set_tile "pnlLim" (cond (*pnlLim (itoa *pnlLim)) (T "1")))
-	  (set_tile "strLim" (cond (*strLim (itoa *strLim)) (T "1")))
+  	  (set_tile "pnlCur" (cond (*pnlCur (itoa *pnlCur) ) (T "1") ) )
+	  (set_tile "strCur" (cond (*strCur (itoa *strCur) ) (T "1") ) )
+	  (set_tile "pnlLim" (cond (*pnlLim (itoa *pnlLim) ) (T "1") ) )
+	  (set_tile "strLim" (cond (*strLim (itoa *strLim) ) (T "1") ) )
 	
           ;; If an action event occurs, do this function
           (action_tile "cancel" "(done_dialog 1)")
@@ -227,59 +273,19 @@
 	  (action_tile "replace" "(saveVars)(done_dialog 3)")
 	  (action_tile "increment" "(saveVars)(done_dialog 4)")
 	  (action_tile "findAll" "(saveVars)(done_dialog 5)")
+	  (action_tile "check" "(saveVars)(done_dialog 6)")
 
 	  ;; Execution of action tiles
-          (setq ddiag(start_dialog))
+          (setq ddiag(start_dialog) )
 
-          (if (= ddiag 1)
-            (princ)
-          )
-          (if (= ddiag 2)
-            (princ)
-          )
-	  (if (= ddiag 3)
-	    (Replace)
-	  )
-	  (if (= ddiag 4)
-	    (Increment)
-	  )
-	  (if (= ddiag 5)
-	    (FindAll)
-	  )
+          (if (= ddiag 1) (princ) )
+          (if (= ddiag 2) (princ) )
+	  (if (= ddiag 3) (Replace) )
+	  (if (= ddiag 4) (Increment) )
+	  (if (= ddiag 5) (FindAll) )
+	  (if (= ddiag 6) (Check) )
         )
       )
     )
   )
 )
-
-;(defun Label (/ mod done)
-;  (prompt
-;    (strcat "\nWhich action would you like to do?"
-;      "\n[R]eplace existing label,"
-;      " [I]ncrement labels,"
-;      " [F]ind identical blocks"
-;      " [S]etup string schedule: "
-;    ); strcat
-;  ); prompt
-;  (while (and (not done) (setq mod (grread T 12 0)))
-;    (cond
-;      ((or (equal opt '(2 82)) (equal mod '(2 114))); typed R or r
-;        (setq done T); [stops (while) loop to end this routine with calling of chosen routine]
-;        (Replace)
-;      ); R condition
-;      ((or (equal opt '(2 73)) (equal mod '(2 105))); typed I or i
-;        (setq done T)
-;        (Increment)
-;      ); I condition
-;      ((or (equal opt '(2 70)) (equal mod '(2 102))); typed F or f
-;        (setq done T)
-;        (FindAll)
-;      ); F condition
-;      ((or (equal opt '(2 83)) (equal mod '(2 115))); typed S or s
-;        (setq done T)
-;        (Setup)
-;      ); S condition
-;    ); cond
-;  ); while
-;); defun
-
