@@ -17,6 +17,9 @@
 ;Dec 03, 2014 : Check function added
 ;		User can now type individual commands
 ;			separately in the command line
+;Dec 04, 2014 : Check function now prompts a list of missing
+;		panels at the end
+;		Comments added to various functions
 ;--------------------------------------------------------------
 
 (defun *error* ( errormsg )
@@ -39,8 +42,8 @@
   (setq *strLim strLim)
 )
 
-;;NOTE: incrementEntityBy terminates AFTER changing the entity,
-;;      whereas incrementBy only assigns values to *pnlCur and *strCur.
+;; NOTE: incrementEntityBy terminates AFTER changing the entity,
+;;       whereas incrementBy only assigns values to *pnlCur and *strCur.
 (defun incrementBy (jump)
   (setq *pnlCur (+ *pnlCur jump) )
 
@@ -106,7 +109,7 @@
 )
 
 (defun ask-int (var msg lim / tmp)
-  ;; Asks for an integer value to parse into the variable,
+  ;; Ask for an integer value to parse into the variable,
   ;; defaulting to the previous value
   (while
     (>(setq tmp
@@ -117,7 +120,8 @@
 	)
       )
       (eval lim)
-    ); if current input is bigger than the limit
+    )
+    ;; If current input is bigger than the limit
     (princ (strcat " must be less than " (itoa (eval lim) ) ) )
   )
   (set var tmp)
@@ -125,27 +129,21 @@
 
 (defun Replace(/ term txt entName entType entInfo)
   (setq ret T)
-;  ;; initialize
-;  (ask-int '*pnlLim "Enter number of panels per string" 9001)
-;  (ask-int '*strLim "Enter number of strings existing" 9001)
-;  (ask-int '*pnlCur "Enter current panel number" *pnlLim)
-;  (ask-int '*strCur "Enter current string number" *strLim)
-
   (setq term 0)
+  
   (while (= term 0)
-    
-    ;; ask user for the label to modify
+    ;; Ask for the label to modify
     (while (and (/= "TEXT" entType) (/= "MTEXT" entType) )
       (setq entName (car (entsel "\nSelect the label: ") ) )
       (cond
-		(entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
-		(T (princ "No objects selected") )
-		;; read selected entity's type if present; otherwise repeat
+	(entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
+	(T (princ "No objects selected") )
+	;; read selected entity's type if present; otherwise repeat
       )
     )
     (setq entType 0)
 
-    ;; replace the chosen label
+    ;; Replace the chosen label
     (setq entInfo (entget entName) )
     (setq txt (strcat (itoa *pnlCur) "." (itoa *strCur) ) )
     (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo) )
@@ -159,12 +157,18 @@
 
 (defun Increment (/ term tmpj ss ssl index)
   (setq ret T)
-  (ask-int 'jump "Enter how much you would increment by" 9001)
   (setq term 0)
+
+  ;; Ask for a number to increment the label by
+  (ask-int 'jump "Enter how much you would increment by" 9001)
+
+  ;; Ask for set of labels to modify
   (while (not ss)
     (setq ss (ssget '( (0 . "TEXT,MTEXT") ) ) )
   )
   (setq ssl (sslength ss) )
+
+  ;; For each labels selected, increment
   (setq index 0)
   (while (and (> ssl index) (= term 0) )
     (incrementEntityBy jump (ssname ss index) )
@@ -174,15 +178,18 @@
 
 (defun FindAll (/ entInfo entName entType blkName ss index count)
   (setq ret T)
+
+  ;; Ask for a model block reference to find
   (while (/= entType "INSERT")
     (setq entName (car (entsel "\nChoose a block reference: ") ) )
     (cond
       (entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
       (T (princ "No block reference selected"))
-      ;; read selected entity's type if present; otherwise repeat
     )
   )
   (princ (setq blkName (cdr (assoc 8 (entget entName) ) ) ) )
+
+  ;; Ask for set of blocks to find from
   (while (not ss)
     (setq ss (ssget '( (0 . "INSERT") ) ) )
   )
@@ -196,16 +203,28 @@
     )
     (setq index (1+ index) )
   )
+
+  ;; Report the result
   (princ (strcat "\nThere are " (itoa count) " \"" blkname
 		 "\" within the selection.") )
   (princ)
 )
 
-(defun Check (/ ss ssl pnlNum strNum index chkTxt lblTxt entName found compl)
+(defun Check (/ ss ssl pnlNum strNum index chkTxt lblTxt entName
+	      found compl len indSp indRow errMsg)
+  (setq ret T)
+
+  (setq indrow 0)
+  (setq compl T)
+  (setq errmsg "")
+  
+  ;; Ask for set of labels to check
   (while (not ss)
     (setq ss (ssget '( (0 . "TEXT,MTEXT") ) ) )
   )
-  (setq compl T)
+
+  ;; Starting from the lowest number, look for an identical label
+  ;; within the selected set
   (setq pnlNum 1)
   (setq strNum 1)
   (while (<= strNum *strLim)
@@ -223,13 +242,35 @@
       )
       (setq index (1+ index) )
     )
+
+    ;; If the number wasn't found, add it to the list of missing labels
     (if (not found)
       (progn
-	(princ (strcat chkTxt "\n") )
+	(setq len (strlen chkTxt) )
+	(setq indsp 0)
+	(while (>= (- 8 len) indsp)
+	  (setq chkTxt (strcat chkTxt " ") )
+	  (setq indsp (1+ indsp) )
+	)
+	(cond
+	  ( (= indrow 7)
+	    (progn
+	      (setq errmsg (strcat errmsg chkTxt "\n") )
+	      (setq indrow 0)
+	    )
+	  )
+	  (T
+	    (progn
+	      (setq errmsg (strcat errmsg chkTxt) )
+	      (setq indrow (1+ indrow) )
+	    )
+	  )
+	)
 	(setq compl nil)
       )
       (setq found nil)
     )
+    
     (setq pnlNum (1+ pnlNum) )
     ;; Step up between strings
     (while (> pnlNum *pnlLim)
@@ -237,8 +278,14 @@
       (setq strNum (1+ strNum) )
     )
   )
+  
+  ;; Report the result
   (if compl
-    (princ "Good to go!")
+    (alert "There were no missing panel number.")
+    (progn
+      (alert (strcat "Following panel numbers are missing : \n" errmsg) )
+      (princ (strcat "\n" errmsg) )
+    )
   )
   (princ)
 )
@@ -288,4 +335,18 @@
       )
     )
   )
+)
+
+;; User function
+(defun C:LABEL (/)
+  (label)
+  (princ)
+)
+(defun C:INCR (/)
+  (increment)
+  (princ)
+)
+(defun C:REPL (/)
+  (replace)
+  (princ)
 )
