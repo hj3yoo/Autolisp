@@ -20,6 +20,8 @@
 ;Dec 04, 2014 : Check function now prompts a list of missing
 ;		panels at the end
 ;		Comments added to various functions
+;		Increment function now asks user for jump
+;		variable at the menu
 ;--------------------------------------------------------------
 
 (defun *error* ( errormsg )
@@ -30,16 +32,17 @@
   (princ)
 )
 
-(defun saveVars(/ pnlCur strCur pnlLim strLim)
+(defun saveVars(/)
   ;; Save the input from the dialog box
-  (setq pnlCur (atoi (get_tile "pnlCur") ) )
-  (setq strCur (atoi (get_tile "strCur") ) )
-  (setq pnlLim (atoi (get_tile "pnlLim") ) )
-  (setq strLim (atoi (get_tile "strLim") ) )
-  (setq *pnlCur pnlCur)
-  (setq *strCur strCur)
-  (setq *pnlLim pnlLim)
-  (setq *strLim strLim)
+  (setq *pnlCur (atoi (get_tile "pnlCur") ) )
+  (setq *strCur (atoi (get_tile "strCur") ) )
+  (setq *pnlLim (atoi (get_tile "pnlLim") ) )
+  (setq *strLim (atoi (get_tile "strLim") ) )
+  (setq *jump (atoi (get_tile "jump") ) )
+  (setq *pnlInit (atoi (get_tile "pnlInit") ) )
+  (setq *strInit (atoi (get_tile "strInit") ) )
+  (setq *pnlTerm (atoi (get_tile "pnlTerm") ) )
+  (setq *strTerm (atoi (get_tile "strTerm") ) )
 )
 
 ;; NOTE: incrementEntityBy terminates AFTER changing the entity,
@@ -160,7 +163,7 @@
   (setq term 0)
 
   ;; Ask for a number to increment the label by
-  (ask-int 'jump "Enter how much you would increment by" 9001)
+  ;;(ask-int 'jump "Enter how much you would increment by" 9001)
 
   ;; Ask for set of labels to modify
   (while (not ss)
@@ -171,7 +174,7 @@
   ;; For each labels selected, increment
   (setq index 0)
   (while (and (> ssl index) (= term 0) )
-    (incrementEntityBy jump (ssname ss index) )
+    (incrementEntityBy *jump (ssname ss index) )
     (setq index (1+ index) )
   )
 )
@@ -227,7 +230,7 @@
   ;; within the selected set
   (setq pnlNum 1)
   (setq strNum 1)
-  (while (<= strNum *strLim)
+  (while (and (<= strNum *strTerm) (<= pnlNum *pnlTerm) )
     (setq index 0)
     (setq ssl (sslength ss) )
     (setq chkTxt (strcat (itoa pnlNum) "." (itoa strNum) ) )
@@ -313,6 +316,23 @@
 	  (set_tile "strCur" (cond (*strCur (itoa *strCur) ) (T "1") ) )
 	  (set_tile "pnlLim" (cond (*pnlLim (itoa *pnlLim) ) (T "1") ) )
 	  (set_tile "strLim" (cond (*strLim (itoa *strLim) ) (T "1") ) )
+	  (set_tile "jump" (cond (*jump (itoa *jump) ) (T "1") ) )
+	  (set_tile "pnlInit" (cond (*pnlInit (itoa *pnlInit) ) (T "1") ) )
+	  (set_tile "strInit" (cond (*strInit (itoa *strInit) ) (T "1") ) )
+	  (set_tile "pnlTerm"
+		    (cond
+		      ((/= *pnlTerm 1) (itoa *pnlTerm) )
+		      (*pnlLim (itoa *pnlLim) )
+		      (T "1")
+		    )
+	  )
+	  (set_tile "strTerm"
+		    (cond
+		      ((/= *strTerm 1) (itoa *strTerm) )
+		      (*strLim (itoa *strLim) ) 
+		      (T "1")
+		    )
+	  )
 	
           ;; If an action event occurs, do this function
           (action_tile "cancel" "(done_dialog 1)")
@@ -348,5 +368,9 @@
 )
 (defun C:REPL (/)
   (replace)
+  (princ)
+)
+(defun C:CHECK (/)
+  (check)
   (princ)
 )
