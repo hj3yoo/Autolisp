@@ -22,6 +22,7 @@
 ;		Comments added to various functions
 ;		Increment function now asks user for jump
 ;		variable at the menu
+;Dec 05, 2014 : Minor cleanup
 ;--------------------------------------------------------------
 
 (defun *error* ( errormsg )
@@ -43,6 +44,10 @@
   (setq *strInit (atoi (get_tile "strInit") ) )
   (setq *pnlTerm (atoi (get_tile "pnlTerm") ) )
   (setq *strTerm (atoi (get_tile "strTerm") ) )
+  (if (and (= *pnlTerm *pnlLim) (= *strTerm *strLim) )
+    (setq chkSnap T)
+    (setq chkSnap nil)
+  )
 )
 
 ;; NOTE: incrementEntityBy terminates AFTER changing the entity,
@@ -319,20 +324,8 @@
 	  (set_tile "jump" (cond (*jump (itoa *jump) ) (T "1") ) )
 	  (set_tile "pnlInit" (cond (*pnlInit (itoa *pnlInit) ) (T "1") ) )
 	  (set_tile "strInit" (cond (*strInit (itoa *strInit) ) (T "1") ) )
-	  (set_tile "pnlTerm"
-		    (cond
-		      ((/= *pnlTerm 1) (itoa *pnlTerm) )
-		      (*pnlLim (itoa *pnlLim) )
-		      (T "1")
-		    )
-	  )
-	  (set_tile "strTerm"
-		    (cond
-		      ((/= *strTerm 1) (itoa *strTerm) )
-		      (*strLim (itoa *strLim) ) 
-		      (T "1")
-		    )
-	  )
+	  (set_tile "pnlTerm" (cond (*pnlTerm (itoa *pnlTerm) ) (T "1") ) )
+	  (set_tile "strTerm" (cond (*strTerm (itoa *strTerm) ) (T "1") ) )
 	
           ;; If an action event occurs, do this function
           (action_tile "cancel" "(done_dialog 1)")
