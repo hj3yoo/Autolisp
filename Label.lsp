@@ -23,6 +23,9 @@
 ;		Increment function now asks user for jump
 ;		variable at the menu
 ;Dec 05, 2014 : Minor cleanup
+;Dec 09, 2014 : Preparation to add AutoLayer function
+;			- Automatically changes layer
+;			  according to its panel number
 ;--------------------------------------------------------------
 
 (defun *error* ( errormsg )
@@ -44,10 +47,19 @@
   (setq *strInit (atoi (get_tile "strInit") ) )
   (setq *pnlTerm (atoi (get_tile "pnlTerm") ) )
   (setq *strTerm (atoi (get_tile "strTerm") ) )
-  (if (and (= *pnlTerm *pnlLim) (= *strTerm *strLim) )
-    (setq chkSnap T)
-    (setq chkSnap nil)
-  )
+  (setq *cb1Opt (get_tile "cb1LayList") )
+  (setq *cb2Opt (get_tile "cb2LayList") )
+  (setq *cb3Opt (get_tile "cb3LayList") )
+  (setq *cb4Opt (get_tile "cb4LayList") )
+  (setq *cb1LayName (nth (atoi *cb1Opt) *layList) )
+  (setq *cb2LayName (nth (atoi *cb2Opt) *layList) )
+  (setq *cb3LayName (nth (atoi *cb3Opt) *layList) )
+  (setq *cb4LayName (nth (atoi *cb4Opt) *layList) )
+  (setq *cb1StrNum (atoi (get_tile "cb1StrNum") ) )
+  (setq *cb2StrNum (atoi (get_tile "cb2StrNum") ) )
+  (setq *cb3StrNum (atoi (get_tile "cb3StrNum") ) )
+  (setq *cb4StrNum (atoi (get_tile "cb4StrNum") ) )
+  (setq *toggle (cond ( (= (get_tile "autoLay") "0") nil) (T T) ) )
 )
 
 ;; NOTE: incrementEntityBy terminates AFTER changing the entity,
@@ -222,9 +234,9 @@
 	      found compl len indSp indRow errMsg)
   (setq ret T)
 
-  (setq indrow 0)
+  (setq indRow 0)
   (setq compl T)
-  (setq errmsg "")
+  (setq errMsg "")
   
   ;; Ask for set of labels to check
   (while (not ss)
@@ -255,22 +267,22 @@
     (if (not found)
       (progn
 	(setq len (strlen chkTxt) )
-	(setq indsp 0)
-	(while (>= (- 8 len) indsp)
+	(setq indSp 0)
+	(while (>= (- 8 len) indSp)
 	  (setq chkTxt (strcat chkTxt " ") )
-	  (setq indsp (1+ indsp) )
+	  (setq indSp (1+ indSp) )
 	)
 	(cond
-	  ( (= indrow 7)
+	  ( (= indRow 7)
 	    (progn
-	      (setq errmsg (strcat errmsg chkTxt "\n") )
-	      (setq indrow 0)
+	      (setq errMsg (strcat errMsg chkTxt "\n") )
+	      (setq indRow 0)
 	    )
 	  )
 	  (T
 	    (progn
-	      (setq errmsg (strcat errmsg chkTxt) )
-	      (setq indrow (1+ indrow) )
+	      (setq errMsg (strcat errMsg chkTxt) )
+	      (setq indRow (1+ indRow) )
 	    )
 	  )
 	)
@@ -291,15 +303,23 @@
   (if compl
     (alert "There were no missing panel number.")
     (progn
-      (alert (strcat "Following panel numbers are missing : \n" errmsg) )
-      (princ (strcat "\n" errmsg) )
+      (alert (strcat "Following panel numbers are missing : \n" errMsg) )
+      (princ (strcat "\n" errMsg) )
     )
   )
   (princ)
 )
 
-(defun Label(/ ddiag dcl_id ret)
+(defun Label(/ ddiag dcl_id ret layList lay)
   (setq ret nil)
+
+  ;; Create a list of layer's name
+  (while (setq lay (cdadr (tblnext "layer" (not lay))))
+    (setq layList (cons lay layList))
+  )
+  (setq layList (acad_strlsort layList))
+  (setq *layList laylist); Global variable
+  
   ;; Try to load the DCL file from disk into memory
   (if(not(setq dcl_id (load_dialog "Menu.dcl") ) )
     (progn
@@ -316,6 +336,21 @@
 
 	;; If the definition was loaded
         (progn
+	  
+	  (start_list "cb1LayList" 3)
+	  (mapcar 'add_list layList)
+	  (end_list)
+	  (start_list "cb2LayList" 3)
+	  (mapcar 'add_list layList)
+	  (end_list)
+	  (start_list "cb3LayList" 3)
+	  (mapcar 'add_list layList)
+	  (end_list)
+	  (start_list "cb4LayList" 3)
+	  (mapcar 'add_list layList)
+	  (end_list)
+
+	  
 	  ;; Generate initial value for variables
   	  (set_tile "pnlCur" (cond (*pnlCur (itoa *pnlCur) ) (T "1") ) )
 	  (set_tile "strCur" (cond (*strCur (itoa *strCur) ) (T "1") ) )
@@ -326,6 +361,14 @@
 	  (set_tile "strInit" (cond (*strInit (itoa *strInit) ) (T "1") ) )
 	  (set_tile "pnlTerm" (cond (*pnlTerm (itoa *pnlTerm) ) (T "1") ) )
 	  (set_tile "strTerm" (cond (*strTerm (itoa *strTerm) ) (T "1") ) )
+	  (set_tile "cb1LayList" (cond (*cb1Opt *cb1Opt) (T "") ) )
+	  (set_tile "cb2LayList" (cond (*cb2Opt *cb2Opt) (T "") ) )
+	  (set_tile "cb3LayList" (cond (*cb3Opt *cb3Opt) (T "") ) )
+	  (set_tile "cb4LayList" (cond (*cb4Opt *cb4Opt) (T "") ) )
+	  (set_tile "cb1StrNum" (cond (*cb1StrNum (itoa *cb1StrNum) ) (T "1") ) )
+	  (set_tile "cb2StrNum" (cond (*cb2StrNum (itoa *cb2StrNum) ) (T "1") ) )
+	  (set_tile "cb3StrNum" (cond (*cb3StrNum (itoa *cb3StrNum) ) (T "1") ) )
+	  (set_tile "cb4StrNum" (cond (*cb4StrNum (itoa *cb4StrNum) ) (T "1") ) )
 	
           ;; If an action event occurs, do this function
           (action_tile "cancel" "(done_dialog 1)")
