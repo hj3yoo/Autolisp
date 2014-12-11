@@ -26,17 +26,12 @@
 ;Dec 09, 2014 : Preparation to add AutoLayer function
 ;			- Automatically changes layer
 ;			  according to its panel number
+;Dec 11, 2014 : autoLay function added
 ;--------------------------------------------------------------
 
-(defun *error* ( errormsg )
-  (if (not (member errormsg '("Function cancelled" "quit / exit abort" "Cancel") ) )
-    (princ (strcat "\nError: " errormsg) )
-    (if ret (Label) )
-  )
-  (princ)
-)
 
-(defun saveVars(/)
+
+(defun saveVars(/ indOpt indStr)
   ;; Save the input from the dialog box
   (setq *pnlCur (atoi (get_tile "pnlCur") ) )
   (setq *strCur (atoi (get_tile "strCur") ) )
@@ -47,19 +42,62 @@
   (setq *strInit (atoi (get_tile "strInit") ) )
   (setq *pnlTerm (atoi (get_tile "pnlTerm") ) )
   (setq *strTerm (atoi (get_tile "strTerm") ) )
-  (setq *cb1Opt (get_tile "cb1LayList") )
-  (setq *cb2Opt (get_tile "cb2LayList") )
-  (setq *cb3Opt (get_tile "cb3LayList") )
-  (setq *cb4Opt (get_tile "cb4LayList") )
-  (setq *cb1LayName (nth (atoi *cb1Opt) *layList) )
-  (setq *cb2LayName (nth (atoi *cb2Opt) *layList) )
-  (setq *cb3LayName (nth (atoi *cb3Opt) *layList) )
-  (setq *cb4LayName (nth (atoi *cb4Opt) *layList) )
-  (setq *cb1StrNum (atoi (get_tile "cb1StrNum") ) )
-  (setq *cb2StrNum (atoi (get_tile "cb2StrNum") ) )
-  (setq *cb3StrNum (atoi (get_tile "cb3StrNum") ) )
-  (setq *cb4StrNum (atoi (get_tile "cb4StrNum") ) )
+  (setq *cbLim (atoi (get_tile "cbLim") ) )
+  (setq *cbOpt nil)
+  (setq *cbStrLim nil)
+  (setq indOpt 1)
+  (setq indStr 1)
+  (while (<= indOpt *cbLim)
+    (setq *cbOpt (cons (get_tile (strcat "cb" (itoa indOpt) "LayList") ) *cbOpt) )
+    (setq indOpt (1+ indOpt) )
+  )
+  (while (<= indStr *cbLim)
+    (setq *cbStrLim (cons (cond
+			    ( (get_tile (strcat "cb" (itoa indStr) "StrLim") )
+			      (atoi (get_tile (strcat "cb" (itoa indStr) "StrLim") ) )
+			    )
+			    (T "0")
+			  )
+		    *cbStrLim)
+    )
+    (setq indStr (1+ indStr) )
+  )
+  ;(setq *cb1Opt (get_tile "cb1LayList") )
+  ;(setq *cb2Opt (get_tile "cb2LayList") )
+  ;(setq *cb3Opt (get_tile "cb3LayList") )
+  ;(setq *cb4Opt (get_tile "cb4LayList") )
+  ;(setq *cb1LayName (nth (atoi *cb1Opt) *layList) )
+  ;(setq *cb2LayName (nth (atoi *cb2Opt) *layList) )
+  ;(setq *cb3LayName (nth (atoi *cb3Opt) *layList) )
+  ;(setq *cb4LayName (nth (atoi *cb4Opt) *layList) )
+  ;(setq *cb1StrLim (atoi (get_tile "cb1StrLim") ) )
+  ;(setq *cb2StrLim (atoi (get_tile "cb2StrLim") ) )
+  ;(setq *cb3StrLim (atoi (get_tile "cb3StrLim") ) )
+  ;(setq *cb4StrLim (atoi (get_tile "cb4StrLim") ) )
   (setq *toggle (cond ( (= (get_tile "autoLay") "0") nil) (T T) ) )
+)
+
+(defun autoLay (strNum / ind found layName strLim)
+  (setq layName nil)
+  (setq found nil)
+  (setq ind 1)
+  (while (and (<= ind *cbLim) (not found) )
+    (if strLim
+      (setq strLim (+ strLim (nth (- *cbLim ind) *cbstrLim) ) )
+      (setq strLim (nth (- *cbLim 1) *cbStrLim) )
+    )
+    (if (and (< (- strLim (nth (- *cbLim ind) *cbStrLim) ) strNum) (>= strLim strNum) )
+      (progn
+	(setq layName (nth (atoi (nth (- *cbLim ind) *cbOpt) ) *layList) )
+	(setq found T)
+      )
+      (setq ind (1+ ind) )
+    )
+  )
+  (if (not found)
+    (setq layName nil)
+  )
+  (princ layName)
 )
 
 ;; NOTE: incrementEntityBy terminates AFTER changing the entity,
@@ -122,30 +160,33 @@
     (progn
       (setq txt (strcat (itoa pnlNum) "." (itoa strNum) ) )
       (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo) )
+      (if (and *toggle (autoLay *strCur) )
+        (setq entInfo (subst (cons 8 (autoLay *strCur) ) (assoc 8 entInfo) entInfo) )
+      )
       (entmod entInfo)
     )
   )
   (princ)
 )
 
-(defun ask-int (var msg lim / tmp)
-  ;; Ask for an integer value to parse into the variable,
-  ;; defaulting to the previous value
-  (while
-    (>(setq tmp
-	(cond
-	  ( (getint (strcat "\n" msg " <" (if (eval var) (itoa (eval var) ) "1")
-			    ">: ") ) )
-	  ( (eval (cond ( (eval var) ) (1) ) ) )
-	)
-      )
-      (eval lim)
-    )
-    ;; If current input is bigger than the limit
-    (princ (strcat " must be less than " (itoa (eval lim) ) ) )
-  )
-  (set var tmp)
-)
+;(defun ask-int (var msg lim / tmp)
+;  ;; Ask for an integer value to parse into the variable,
+;  ;; defaulting to the previous value
+;  (while
+;    (>(setq tmp
+;	(cond
+;	  ( (getint (strcat "\n" msg " <" (if (eval var) (itoa (eval var) ) "1")
+;			    ">: ") ) )
+;	  ( (eval (cond ( (eval var) ) (1) ) ) )
+;	)
+;      )
+;      (eval lim)
+;    )
+;    ;; If current input is bigger than the limit
+;    (princ (strcat " must be less than " (itoa (eval lim) ) ) )
+;  )
+;  (set var tmp)
+;)
 
 (defun Replace(/ term txt entName entType entInfo)
   (setq ret T)
@@ -167,6 +208,9 @@
     (setq entInfo (entget entName) )
     (setq txt (strcat (itoa *pnlCur) "." (itoa *strCur) ) )
     (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo) )
+    (if (and *toggle (autoLay *strCur) )
+      (setq entInfo (subst (cons 8 (autoLay *strCur) ) (assoc 8 entInfo) entInfo) )
+    )
     (entmod entInfo)
     (princ txt)
     (incrementBy 1)
@@ -310,15 +354,15 @@
   (princ)
 )
 
-(defun Label(/ ddiag dcl_id ret layList lay)
+(defun Label(/ ddiag dcl_id ret lay intStr intOpt)
   (setq ret nil)
 
   ;; Create a list of layer's name
+  (setq *layList nil)
   (while (setq lay (cdadr (tblnext "layer" (not lay))))
-    (setq layList (cons lay layList))
+    (setq *layList (cons lay *layList))
   )
-  (setq layList (acad_strlsort layList))
-  (setq *layList laylist); Global variable
+  (setq *layList (acad_strlsort *layList))
   
   ;; Try to load the DCL file from disk into memory
   (if(not(setq dcl_id (load_dialog "Menu.dcl") ) )
@@ -337,18 +381,25 @@
 	;; If the definition was loaded
         (progn
 	  
-	  (start_list "cb1LayList" 3)
-	  (mapcar 'add_list layList)
-	  (end_list)
-	  (start_list "cb2LayList" 3)
-	  (mapcar 'add_list layList)
-	  (end_list)
-	  (start_list "cb3LayList" 3)
-	  (mapcar 'add_list layList)
-	  (end_list)
-	  (start_list "cb4LayList" 3)
-	  (mapcar 'add_list layList)
-	  (end_list)
+	  (setq indList 1)
+	  (while (<= indList 8)
+	    (start_list (strcat "cb" (itoa indList) "LayList") 3)
+	    (mapcar 'add_list *layList)
+	    (end_list)
+	    (setq indList (1+ indList) )
+	  )
+	  ;(start_list "cb1LayList" 3)
+	  ;(mapcar 'add_list *layList)
+	  ;(end_list)
+	  ;(start_list "cb2LayList" 3)
+	  ;(mapcar 'add_list *layList)
+	  ;(end_list)
+	  ;(start_list "cb3LayList" 3)
+	  ;(mapcar 'add_list *layList)
+	  ;(end_list)
+	  ;(start_list "cb4LayList" 3)
+	  ;(mapcar 'add_list *layList)
+	  ;(end_list)
 
 	  
 	  ;; Generate initial value for variables
@@ -361,14 +412,36 @@
 	  (set_tile "strInit" (cond (*strInit (itoa *strInit) ) (T "1") ) )
 	  (set_tile "pnlTerm" (cond (*pnlTerm (itoa *pnlTerm) ) (T "1") ) )
 	  (set_tile "strTerm" (cond (*strTerm (itoa *strTerm) ) (T "1") ) )
-	  (set_tile "cb1LayList" (cond (*cb1Opt *cb1Opt) (T "") ) )
-	  (set_tile "cb2LayList" (cond (*cb2Opt *cb2Opt) (T "") ) )
-	  (set_tile "cb3LayList" (cond (*cb3Opt *cb3Opt) (T "") ) )
-	  (set_tile "cb4LayList" (cond (*cb4Opt *cb4Opt) (T "") ) )
-	  (set_tile "cb1StrNum" (cond (*cb1StrNum (itoa *cb1StrNum) ) (T "1") ) )
-	  (set_tile "cb2StrNum" (cond (*cb2StrNum (itoa *cb2StrNum) ) (T "1") ) )
-	  (set_tile "cb3StrNum" (cond (*cb3StrNum (itoa *cb3StrNum) ) (T "1") ) )
-	  (set_tile "cb4StrNum" (cond (*cb4StrNum (itoa *cb4StrNum) ) (T "1") ) )
+	  (set_tile "autoLay" (cond (*toggle "1") (T "0") ) )
+	  (set_tile "cbLim" (cond (*cbLim (itoa *cbLim) ) (T "8") ) )
+	  (setq indStr 1)
+	  (while (<= indStr *cbLim)
+	    (set_tile (strcat "cb" (itoa indStr) "StrLim")
+		      (cond
+			(*cbStrLim (itoa (nth (- *cbLim indStr) *cbStrLim) ) )
+			(T "0")
+		      )
+	    )
+	    (setq indStr (1+ indStr) )
+	  )
+	  (setq indOpt 1)
+	  (while (<= indOpt *cbLim)
+	    (set_tile (strcat "cb" (itoa indOpt) "LayList")
+		      (cond
+			(*cbOpt (nth (- *cbLim indOpt) *cbOpt)  )
+			(T "0")
+		      )
+	    )
+	    (setq indOpt (1+ indOpt) )
+	  )		      
+	  ;(set_tile "cb1LayList" (cond (*cb1Opt *cb1Opt) (T "") ) )
+	  ;(set_tile "cb2LayList" (cond (*cb2Opt *cb2Opt) (T "") ) )
+	  ;(set_tile "cb3LayList" (cond (*cb3Opt *cb3Opt) (T "") ) )
+	  ;(set_tile "cb4LayList" (cond (*cb4Opt *cb4Opt) (T "") ) )
+	  ;(set_tile "cb1StrLim" (cond (*cb1StrLim (itoa *cb1StrLim) ) (T "1") ) )
+	  ;(set_tile "cb2StrLim" (cond (*cb2StrLim (itoa *cb2StrLim) ) (T "1") ) )
+	  ;(set_tile "cb3StrLim" (cond (*cb3StrLim (itoa *cb3StrLim) ) (T "1") ) )
+	  ;(set_tile "cb4StrLim" (cond (*cb4StrLim (itoa *cb4StrLim) ) (T "1") ) )
 	
           ;; If an action event occurs, do this function
           (action_tile "cancel" "(done_dialog 1)")
