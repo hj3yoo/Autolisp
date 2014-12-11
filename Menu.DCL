@@ -139,12 +139,22 @@ Menu : dialog {
 	      }
 	  }
 	  : boxed_column {
-	      width = 60;
+	      //width = 60;
 	      : row {
 		  : toggle {
 		      key = "autoLay";
 		      label = " Automatically change layer according to panel number";
-		      value = "1";
+		      value = "";
+		  }
+	      }
+	      : row {
+	      children_alignment = right;
+		  : spacer_1 { width = 30; }
+		  : edit_box {
+		      key = "cbLim";
+		      label = "Number of CB's: ";
+		      width = 3;
+		      value = "";
 		  }
 	      }
 	      : row {
@@ -158,7 +168,7 @@ Menu : dialog {
 		      value = "";
 		  }
 		  : edit_box {
-		      key = "cb1StrNum";
+		      key = "cb1StrLim";
 		      label = " contains ";
 		      width = 3;
 		      value = "";
@@ -179,9 +189,9 @@ Menu : dialog {
 		      value = "";
 		  }
 		  : edit_box {
-		      key = "cb2StrNum";
+		      key = "cb2StrLim";
 		      label = " contains ";
-		      width = 3;)(
+		      width = 3;
 		      value = "";
 		  }
 		  : text {
@@ -200,7 +210,7 @@ Menu : dialog {
 		      value = "";
 		  }
 		  : edit_box {
-		      key = "cb3StrNum";
+		      key = "cb3StrLim";
 		      label = " contains ";
 		      width = 3;
 		      value = "";
@@ -221,7 +231,91 @@ Menu : dialog {
 		      value = "";
 		  }
 		  : edit_box {
-		      key = "cb4StrNum";
+		      key = "cb4StrLim";
+		      label = " contains ";
+		      width = 3;
+		      value = "";
+		  }
+		  : text {
+		      value = "strings";
+		      width = 3;
+		  }
+	      }
+	      : row {
+		  : text {
+		      value = "CB #5";
+		      width = 3;
+		  }
+		  : popup_list {
+		      key = "cb5LayList";
+		      width = 20;
+		      value = "";
+		  }
+		  : edit_box {
+		      key = "cb5StrLim";
+		      label = " contains ";
+		      width = 3;
+		      value = "";
+		  }
+		  : text {
+		      value = "strings";
+		      width = 3;
+		  }
+	      }
+	      : row {
+		  : text {
+		      value = "CB #6";
+		      width = 3;
+		  }
+		  : popup_list {
+		      key = "cb6LayList";
+		      width = 20;
+		      value = "";
+		  }
+		  : edit_box {
+		      key = "cb6StrLim";
+		      label = " contains ";
+		      width = 3;
+		      value = "";
+		  }
+		  : text {
+		      value = "strings";
+		      width = 3;
+		  }
+	      }
+	      : row {
+		  : text {
+		      value = "CB #7";
+		      width = 3;
+		  }
+		  : popup_list {
+		      key = "cb7LayList";
+		      width = 20;
+		      value = "";
+		  }
+		  : edit_box {
+		      key = "cb7StrLim";
+		      label = " contains ";
+		      width = 3;
+		      value = "";
+		  }
+		  : text {
+		      value = "strings";
+		      width = 3;
+		  }
+	      }
+	      : row {
+		  : text {
+		      value = "CB #8";
+		      width = 3;
+		  }
+		  : popup_list {
+		      key = "cb8LayList";
+		      width = 20;
+		      value = "";
+		  }
+		  : edit_box {
+		      key = "cb8StrLim";
 		      label = " contains ";
 		      width = 3;
 		      value = "";
