@@ -27,9 +27,22 @@
 ;			- Automatically changes layer
 ;			  according to its panel number
 ;Dec 11, 2014 : autoLay function added
+;Jan 16, 2014 : Fixed a bug regarding applying autoLay
+;		Check function now correctly checks from the
+;		given initial point
+;		Cleanup & comment
+;		FindAll deleted
 ;--------------------------------------------------------------
 
-
+(defun *error* ( errormsg )
+  ;; If exited by pressing esc, return to main interface
+  ;; Currently only working on the first time
+  (if (not (member errormsg '("Function cancelled" "quit / exit abort" "Cancel") ) )
+    (princ (strcat "\nError: " errormsg) )
+    (if ret (Label) )
+  )
+  (princ)
+)
 
 (defun saveVars(/ indOpt indStr)
   ;; Save the input from the dialog box
@@ -62,18 +75,6 @@
     )
     (setq indStr (1+ indStr) )
   )
-  ;(setq *cb1Opt (get_tile "cb1LayList") )
-  ;(setq *cb2Opt (get_tile "cb2LayList") )
-  ;(setq *cb3Opt (get_tile "cb3LayList") )
-  ;(setq *cb4Opt (get_tile "cb4LayList") )
-  ;(setq *cb1LayName (nth (atoi *cb1Opt) *layList) )
-  ;(setq *cb2LayName (nth (atoi *cb2Opt) *layList) )
-  ;(setq *cb3LayName (nth (atoi *cb3Opt) *layList) )
-  ;(setq *cb4LayName (nth (atoi *cb4Opt) *layList) )
-  ;(setq *cb1StrLim (atoi (get_tile "cb1StrLim") ) )
-  ;(setq *cb2StrLim (atoi (get_tile "cb2StrLim") ) )
-  ;(setq *cb3StrLim (atoi (get_tile "cb3StrLim") ) )
-  ;(setq *cb4StrLim (atoi (get_tile "cb4StrLim") ) )
   (setq *toggle (cond ( (= (get_tile "autoLay") "0") nil) (T T) ) )
 )
 
@@ -82,10 +83,13 @@
   (setq found nil)
   (setq ind 1)
   (while (and (<= ind *cbLim) (not found) )
+    ;; Read the value of strLim from *cbStrLim, then add it to the current value
+    ;; If this is the first time, set it to the first value
     (if strLim
       (setq strLim (+ strLim (nth (- *cbLim ind) *cbstrLim) ) )
       (setq strLim (nth (- *cbLim 1) *cbStrLim) )
     )
+    ;; If strNum is within range of the current CB, fetch the CB's layer name
     (if (and (< (- strLim (nth (- *cbLim ind) *cbStrLim) ) strNum) (>= strLim strNum) )
       (progn
 	(setq layName (nth (atoi (nth (- *cbLim ind) *cbOpt) ) *layList) )
@@ -97,11 +101,10 @@
   (if (not found)
     (setq layName nil)
   )
-  (princ layName)
+  ;; Return the layer name
+  (setq layName layName)
 )
 
-;; NOTE: incrementEntityBy terminates AFTER changing the entity,
-;;       whereas incrementBy only assigns values to *pnlCur and *strCur.
 (defun incrementBy (jump)
   (setq *pnlCur (+ *pnlCur jump) )
 
@@ -160,33 +163,14 @@
     (progn
       (setq txt (strcat (itoa pnlNum) "." (itoa strNum) ) )
       (setq entInfo (subst (cons 1 txt) (assoc 1 entInfo) entInfo) )
-      (if (and *toggle (autoLay *strCur) )
-        (setq entInfo (subst (cons 8 (autoLay *strCur) ) (assoc 8 entInfo) entInfo) )
+      (if (and *toggle (autoLay strNum) )
+        (setq entInfo (subst (cons 8 (autoLay strNum) ) (assoc 8 entInfo) entInfo) )
       )
       (entmod entInfo)
     )
   )
   (princ)
 )
-
-;(defun ask-int (var msg lim / tmp)
-;  ;; Ask for an integer value to parse into the variable,
-;  ;; defaulting to the previous value
-;  (while
-;    (>(setq tmp
-;	(cond
-;	  ( (getint (strcat "\n" msg " <" (if (eval var) (itoa (eval var) ) "1")
-;			    ">: ") ) )
-;	  ( (eval (cond ( (eval var) ) (1) ) ) )
-;	)
-;      )
-;      (eval lim)
-;    )
-;    ;; If current input is bigger than the limit
-;    (princ (strcat " must be less than " (itoa (eval lim) ) ) )
-;  )
-;  (set var tmp)
-;)
 
 (defun Replace(/ term txt entName entType entInfo)
   (setq ret T)
@@ -223,9 +207,6 @@
   (setq ret T)
   (setq term 0)
 
-  ;; Ask for a number to increment the label by
-  ;;(ask-int 'jump "Enter how much you would increment by" 9001)
-
   ;; Ask for set of labels to modify
   (while (not ss)
     (setq ss (ssget '( (0 . "TEXT,MTEXT") ) ) )
@@ -240,44 +221,9 @@
   )
 )
 
-(defun FindAll (/ entInfo entName entType blkName ss index count)
-  (setq ret T)
-
-  ;; Ask for a model block reference to find
-  (while (/= entType "INSERT")
-    (setq entName (car (entsel "\nChoose a block reference: ") ) )
-    (cond
-      (entName (setq entType (cdr (assoc 0 (entget entName) ) ) ) )
-      (T (princ "No block reference selected"))
-    )
-  )
-  (princ (setq blkName (cdr (assoc 8 (entget entName) ) ) ) )
-
-  ;; Ask for set of blocks to find from
-  (while (not ss)
-    (setq ss (ssget '( (0 . "INSERT") ) ) )
-  )
-  
-  ;; Count the number of same block reference
-  (setq index 0)
-  (setq count 0)
-  (while (< index (sslength ss))
-    (if (= (cdr (assoc 8 (entget (ssname ss index) ) ) ) blkName)
-      (setq count (1+ count) )
-    )
-    (setq index (1+ index) )
-  )
-
-  ;; Report the result
-  (princ (strcat "\nThere are " (itoa count) " \"" blkname
-		 "\" within the selection.") )
-  (princ)
-)
-
 (defun Check (/ ss ssl pnlNum strNum index chkTxt lblTxt entName
 	      found compl len indSp indRow errMsg)
   (setq ret T)
-
   (setq indRow 0)
   (setq compl T)
   (setq errMsg "")
@@ -289,8 +235,8 @@
 
   ;; Starting from the lowest number, look for an identical label
   ;; within the selected set
-  (setq pnlNum 1)
-  (setq strNum 1)
+  (setq pnlNum *pnlInit)
+  (setq strNum *strInit)
   (while (and (<= strNum *strTerm) (<= pnlNum *pnlTerm) )
     (setq index 0)
     (setq ssl (sslength ss) )
@@ -308,6 +254,7 @@
     )
 
     ;; If the number wasn't found, add it to the list of missing labels
+    ;; If found, adjust its layer
     (if (not found)
       (progn
 	(setq len (strlen chkTxt) )
@@ -332,7 +279,14 @@
 	)
 	(setq compl nil)
       )
-      (setq found nil)
+      (progn
+	(setq found nil)
+	(setq entInfo (entget entName) )
+	(if (and *toggle (autoLay strNum) )
+	  (setq entInfo (subst (cons 8 (autoLay strNum) ) (assoc 8 entInfo) entInfo) )
+	)
+	(entmod entInfo)
+      )
     )
     
     (setq pnlNum (1+ pnlNum) )
@@ -388,19 +342,6 @@
 	    (end_list)
 	    (setq indList (1+ indList) )
 	  )
-	  ;(start_list "cb1LayList" 3)
-	  ;(mapcar 'add_list *layList)
-	  ;(end_list)
-	  ;(start_list "cb2LayList" 3)
-	  ;(mapcar 'add_list *layList)
-	  ;(end_list)
-	  ;(start_list "cb3LayList" 3)
-	  ;(mapcar 'add_list *layList)
-	  ;(end_list)
-	  ;(start_list "cb4LayList" 3)
-	  ;(mapcar 'add_list *layList)
-	  ;(end_list)
-
 	  
 	  ;; Generate initial value for variables
   	  (set_tile "pnlCur" (cond (*pnlCur (itoa *pnlCur) ) (T "1") ) )
@@ -434,14 +375,6 @@
 	    )
 	    (setq indOpt (1+ indOpt) )
 	  )		      
-	  ;(set_tile "cb1LayList" (cond (*cb1Opt *cb1Opt) (T "") ) )
-	  ;(set_tile "cb2LayList" (cond (*cb2Opt *cb2Opt) (T "") ) )
-	  ;(set_tile "cb3LayList" (cond (*cb3Opt *cb3Opt) (T "") ) )
-	  ;(set_tile "cb4LayList" (cond (*cb4Opt *cb4Opt) (T "") ) )
-	  ;(set_tile "cb1StrLim" (cond (*cb1StrLim (itoa *cb1StrLim) ) (T "1") ) )
-	  ;(set_tile "cb2StrLim" (cond (*cb2StrLim (itoa *cb2StrLim) ) (T "1") ) )
-	  ;(set_tile "cb3StrLim" (cond (*cb3StrLim (itoa *cb3StrLim) ) (T "1") ) )
-	  ;(set_tile "cb4StrLim" (cond (*cb4StrLim (itoa *cb4StrLim) ) (T "1") ) )
 	
           ;; If an action event occurs, do this function
           (action_tile "cancel" "(done_dialog 1)")
