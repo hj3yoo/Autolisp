@@ -32,6 +32,7 @@
 ;		given initial point
 ;		Cleanup & comment
 ;		FindAll deleted
+;Jan 17, 2014 : Minor bugfix on Check function
 ;--------------------------------------------------------------
 
 (defun *error* ( errormsg )
